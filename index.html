@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Immersive Story Maker</title>
+    <!-- Load Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Custom font import for better look */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f7f9fb;
+        }
+        /* Custom scrollbar for aesthetics */
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background-color: #a5b4fc;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <!-- Main Application Container -->
+    <div class="bg-white rounded-xl shadow-2xl p-6 sm:p-10 w-full max-w-4xl border border-gray-100">
+
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-extrabold text-indigo-700 mb-2">
+                The Imagination Factory 🦄
+            </h1>
+            <p class="text-gray-500">Describe the core premise of your story, and we'll weave a random, long-form tale around it.</p>
+        </header>
+
+        <!-- Input Section: Single Text Area -->
+        <div id="input-section" class="mb-8">
+            
+            <label for="story-theme" class="block text-xl font-bold text-gray-700 mb-2">
+                Your Story Premise:
+            </label>
+            <textarea id="story-theme" 
+                      placeholder="e.g., A lonely wizard searching for a lost memory, The struggle to save a sinking city, A tired spy on their last mission."
+                      rows="4"
+                      class="w-full p-4 border border-indigo-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition duration-150 resize-y"></textarea>
+            
+        </div>
+
+        <!-- Action Buttons (Generate and Export) -->
+        <div class="flex flex-col sm:flex-row gap-4">
+            <button id="generate-button" 
+                    class="w-full sm:w-3/4 py-4 bg-green-500 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-green-600 transition duration-300 transform hover:scale-[1.01]">
+                GENERATE LONG STORY
+            </button>
+
+            <!-- Export Dropdown -->
+            <div class="relative w-full sm:w-1/4" x-data="{ open: false }" @click.outside="open = false">
+                <button id="export-toggle" @click="open = !open" 
+                        class="w-full py-4 bg-indigo-500 text-white font-bold text-lg rounded-xl shadow-lg hover:bg-indigo-600 transition duration-300 flex items-center justify-center space-x-2 disabled:opacity-50"
+                        disabled>
+                    <span>Export</span>
+                    <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                </button>
+                <div id="export-menu" class="absolute right-0 mt-2 w-48 bg-white border border-gray-200 rounded-lg shadow-xl z-10 hidden">
+                    <a href="#" id="copy-button" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-t-lg">
+                        Copy to Clipboard
+                    </a>
+                    <a href="#" id="download-button" class="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-b-lg">
+                        Download as .txt
+                    </a>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Status/Copy Message -->
+        <div id="status-message" class="text-center mt-4 text-sm text-green-600 h-5"></div>
+
+        <!-- Story Output Section -->
+        <div class="mt-10 pt-6 border-t border-gray-200">
+            <h2 class="text-2xl font-semibold text-gray-800 mb-4 flex items-center">
+                <svg class="w-6 h-6 mr-2 text-yellow-500" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 2h2v4H6V6zm4 0h4v10h-4V6z" clip-rule="evenodd"></path></svg>
+                The Final Narrative
+            </h2>
+            <div id="story-output" data-initial-content="true" class="p-5 bg-indigo-50 text-gray-800 rounded-xl border border-indigo-200 min-h-[250px] custom-scrollbar overflow-y-auto whitespace-pre-wrap leading-relaxed">
+                <p class="text-gray-500 italic">
+                    Your story will appear here once you describe the premise and click the button above!
+                </p>
+            </div>
+        </div>
+
+        <!-- Custom Modal for Alert Messages (instead of alert()) -->
+        <div id="modal" class="fixed inset-0 bg-gray-600 bg-opacity-75 hidden items-center justify-center z-50">
+            <div class="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full">
+                <h3 class="text-xl font-bold text-red-600 mb-4">Input Required</h3>
+                <p id="modal-message" class="text-gray-700 mb-6">Please enter your story premise to generate a narrative.</p>
+                <button onclick="document.getElementById('modal').classList.add('hidden'); document.getElementById('modal').classList.remove('flex');" 
+                        class="w-full py-2 bg-red-500 text-white rounded-lg hover:bg-red-600 transition duration-150">
+                    Got it
+                </button>
+            </div>
+        </div>
+
+    </div>
+    
+    <!-- Alpine.js for simple dropdown state management (optional but helps for UI) -->
+    <script src="https://cdn.jsdelivr.net/gh/alpinejs/alpine@v3.x.x/dist/cdn.min.js" defer></script>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const generateButton = document.getElementById('generate-button');
+            const storyOutput = document.getElementById('story-output');
+            const exportToggle = document.getElementById('export-toggle');
+            const exportMenu = document.getElementById('export-menu');
+            const copyButton = document.getElementById('copy-button');
+            const downloadButton = document.getElementById('download-button');
+            const statusMessage = document.getElementById('status-message');
+            
+            // --- MASSIVELY EXPANDED RANDOM WORD LISTS ---
+            const ADJECTIVES = [
+                "shadowy", "ancient", "futuristic", "whispering", "electric", 
+                "gilded", "forgotten", "glowing", "shimmering", "ethereal", 
+                "colossal", "fleeting", "vibrant", "turbulent", "majestic", 
+                "obsidian", "crystalline", "murky", "verdant", "sunken", "hollow", 
+                "spectral", "chromatic", "silent", "fractured", "resilient", "infinite"
+            ];
+            const VERBS = [
+                "discovered", "unraveled", "collided", "vanished", "danced", 
+                "repaired", "decoded", "conquered", "imagined", "ascended", 
+                "plunged", "whispered", "endured", "betrayed", "forged",
+                "fabricated", "witnessed", "overcame", "imploded", "recalibrated", 
+                "sought", "defied", "investigated", "challenged", "sustained", "altered"
+            ];
+            const PLACES = [
+                "the Crystal Caves", "a deserted Mars colony", "the Floating City of Aethel", 
+                "an ancient library", "the edge of the known universe", "a forgotten factory", 
+                "the Sunken Metropolis of Xylos", "the Valley of Echoes", "a pocket dimension",
+                "the Obsidian Citadel", "the Whispering Tundra", "the Scarlet Sea", 
+                "a celestial nexus", "the Clockwork Tower", "the Maze of Ages", "the Zero-Gravity Gardens"
+            ];
+            const ADVERBS = [
+                "slowly", "feverishly", "quietly", "reluctantly", "fiercely", 
+                "joyfully", "clumsily", "immediately", "suddenly", "silently", 
+                "viciously", "cautiously", "deliberately", "unwaveringly", "frequently", "perpetually"
+            ];
+            const NOUNS = [
+                "cipher", "artifact", "relic", "golem", "machine", "prophecy", 
+                "portal", "anomaly", "guardian", "mechanism", "cartographer", "sentinel"
+            ];
+            
+            // Helper function to get a random item from a list
+            const getRandomItem = (list) => {
+                return list[Math.floor(Math.random() * list.length)];
+            };
+            
+            // Function to get multiple *unique* random words from a list
+            const getUniqueWords = (list, count) => {
+                const shuffled = list.sort(() => 0.5 - Math.random());
+                return shuffled.slice(0, count);
+            };
+
+
+            // --- STRUCTURAL RANDOMIZATION: PHRASES AND SENTENCE FRAGMENTS ---
+            
+            // Generates 6 unique adjectives, 6 unique verbs, 3 unique places, 3 unique adverbs, 2 unique nouns
+            const generateRandomVariables = () => {
+                return {
+                    A: getUniqueWords(ADJECTIVES, 6),
+                    V: getUniqueWords(VERBS, 6),
+                    PL: getUniqueWords(PLACES, 3),
+                    ADV: getUniqueWords(ADVERBS, 3),
+                    N: getUniqueWords(NOUNS, 2)
+                };
+            };
+            
+            // The template uses variables P (Premise), and A[1-6], V[1-6], PL[1-3], ADV[1-3], N[1-2]
+            
+            const openings = [
+                (P, A, PL) => `The entire known cosmos was held captive by the single, ${A[0]} reality of **${P}**. It was a truth as cold as the depths of ${PL[0]}.`,
+                (P, A, PL) => `It began not with a bang, but a ${A[0]} whisper. A whisper that spoke of a hidden solution to the great dilemma: **${P}**. Our story starts far from civilization, in the ${A[1]} shadows of ${PL[0]}.`,
+                (P, A, PL) => `For countless generations, humanity had learned to live under the shadow of **${P}**. Yet, a single act of defiance, sparked by a ${A[0]} desire, began the revolution in the forgotten corner of ${PL[0]}.`,
+            ];
+
+            const inciting_incidents = [
+                (A, V, N) => `The protagonist, driven by a need to **${V[0]}** the silence, stumbled upon a ${A[2]} ${N[0]} that had been **${V[1]}** for centuries.`,
+                (A, V, N) => `A sudden, ${A[2]} transmission urged the hero to **${V[0]}** immediately. The message detailed the capture of a key ${N[0]}, vital to overcoming the premise, which had been **${V[1]}**.`,
+                (A, V, N) => `While trying to **${V[0]}** their past, the hero unexpectedly encountered a ${A[2]} ${N[0]}. This object began to **${V[1]}** a map of the path forward.`,
+            ];
+            
+            const mid_story_conflicts = [
+                (A, V, PL, ADV) => `The trail led ${ADV[0]} to the ${A[3]} ruins of ${PL[1]}. Here, they had to **${V[2]}** a massive, $\\text{${A[4]}}$ security system that fiercely tried to **${V[3]}** their entry.`,
+                (A, V, PL, ADV) => `Their journey was halted ${ADV[0]} near ${PL[1]}, where they faced a powerful adversary who aimed to **${V[2]}** the ${A[3]}$ solution. The hero had to **${V[3]}** a complex ethical dilemma to proceed.`,
+                (A, V, PL, ADV) => `A critical setback occurred at ${PL[1]}, a location known for its ${A[3]} inhabitants. The protagonist was forced to **${V[2]}** a fragile alliance, needing assistance to ${ADV[0]} **${V[3]}** the ancient curse.`,
+            ];
+            
+            const climax_preparations = [
+                (A, V, PL, N, ADV) => `Having **${V[4]}** the central conflict, the hero finally arrived at the ${A[5]} heart of the problem in ${PL[2]}. The final goal was to **${V[5]}** the ${N[1]} before the enemy could activate it ${ADV[1]}.`,
+                (A, V, PL, N, ADV) => `The combined efforts of the team successfully **${V[4]}** a portal, leading them to ${PL[2]}. The final task: **${V[5]}** the ancient ${N[1]} hidden there, but they had to move ${ADV[1]}.`,
+                (A, V, PL, N, ADV) => `Through sheer will, the protagonist managed to **${V[4]}** the final barrier. The fate of the world now hinged on them being able to **${V[5]}** the power of the ${N[1]} in ${PL[2]}, acting ${ADV[1]} under pressure.`,
+            ];
+            
+            const resolutions = [
+                (P, A, V, ADV) => `The final action was successful, and the long shadow of **${P}** was lifted. The world breathed ${ADV[2]}. The hero, having **${V[6]}** such great odds, became a ${A[6]} legend, forever remembered for their sacrifice.`,
+                (P, A, V, ADV) => `Despite the victory, the premise of **${P}** was only transformed, not destroyed. The hero chose, ${ADV[2]}, to **${V[6]}** into the newly formed unknown, ready to face the next ${A[6]} challenge.`,
+                (P, A, V, ADV) => `The final, ${A[6]} solution was unexpected: by choosing to **${V[6]}** the problem entirely, the energy behind **${P}** simply dissipated. The protagonist watched ${ADV[2]} as the universe settled into a fragile, new peace.`,
+            ];
+
+
+            // --- Main Story Generation Logic ---
+            
+            const generateUniqueStory = (theme) => {
+                const R = generateRandomVariables(); // R holds all unique variables
+                
+                // P is the user premise
+                const P = theme; 
+                
+                // Assemble the story by picking one random phrase from each category
+                const finalStory = `
+${getRandomItem(openings)(P, R.A, R.PL)}
+
+${getRandomItem(inciting_incidents)(R.A, R.V, R.N)} This required leaving behind everything known, and embracing the ${R.A[3]} unknown.
+
+${getRandomItem(mid_story_conflicts)(R.A, R.V, R.PL, R.ADV)} The mission's complexity grew ${R.ADV[1]}, forcing a radical change in strategy.
+
+${getRandomItem(climax_preparations)(R.A, R.V, R.PL, R.N, R.ADV)} The tension was ${R.A[4]}, and the fate of reality hung in the balance.
+
+${getRandomItem(resolutions)(P, R.A, R.V, R.ADV)} The journey may have ended, but the memory of ${R.PL[0]} and the courage to **${R.V[3]}** remained.
+`;
+                return finalStory;
+            };
+
+            // --- UI Setup and Event Handlers (Unchanged from previous versions) ---
+
+            const showAlert = (message) => {
+                document.getElementById('modal-message').textContent = message;
+                document.getElementById('modal').classList.remove('hidden');
+                document.getElementById('modal').classList.add('flex');
+            };
+
+            const showStatus = (message) => {
+                statusMessage.textContent = message;
+                setTimeout(() => {
+                    statusMessage.textContent = '';
+                }, 3000);
+            };
+
+            exportToggle.addEventListener('click', () => {
+                exportMenu.classList.toggle('hidden');
+            });
+            
+            document.addEventListener('click', (event) => {
+                if (!exportToggle.contains(event.target) && !exportMenu.contains(event.target)) {
+                    exportMenu.classList.add('hidden');
+                }
+            });
+
+
+            generateButton.addEventListener('click', () => {
+                const theme = document.getElementById('story-theme').value.trim();
+
+                if (theme.length < 10) {
+                    showAlert("Please enter a longer, more descriptive premise (at least 10 characters) to fuel the epic story.");
+                    exportToggle.disabled = true;
+                    return;
+                }
+
+                const generatedStoryText = generateUniqueStory(theme);
+
+                storyOutput.innerHTML = `<pre class="whitespace-pre-wrap">${generatedStoryText}</pre>`;
+                
+                storyOutput.dataset.initialContent = "false"; 
+                exportToggle.disabled = false;
+            });
+
+
+            copyButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                exportMenu.classList.add('hidden');
+
+                if (storyOutput.dataset.initialContent === "true" || exportToggle.disabled) {
+                    showAlert("Please generate a story first before attempting to copy it.");
+                    return;
+                }
+
+                const tempTextarea = document.createElement('textarea');
+                tempTextarea.value = storyOutput.textContent || storyOutput.innerText;
+                document.body.appendChild(tempTextarea);
+                tempTextarea.select();
+
+                try {
+                    document.execCommand('copy');
+                    showStatus("✅ Story copied to clipboard!");
+                } catch (err) {
+                    console.error('Failed to copy text: ', err);
+                    showStatus("❌ Copy failed. Please try downloading.");
+                } finally {
+                    document.body.removeChild(tempTextarea);
+                }
+            });
+
+            downloadButton.addEventListener('click', (e) => {
+                e.preventDefault();
+                exportMenu.classList.add('hidden');
+
+                if (storyOutput.dataset.initialContent === "true" || exportToggle.disabled) {
+                    showAlert("Please generate a story first before attempting to download it.");
+                    return;
+                }
+
+                const storyContent = storyOutput.textContent || storyOutput.innerText;
+                const blob = new Blob([storyContent], { type: 'text/plain' });
+                
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = 'epic_narrative.txt';
+                
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                
+                URL.revokeObjectURL(a.href);
+                
+                showStatus("💾 Story downloaded successfully!");
+            });
+
+        });
+    </script>
+</body>
+</html>
